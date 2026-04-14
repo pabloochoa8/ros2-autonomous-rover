@@ -10,37 +10,30 @@ def generate_launch_description():
     use_sim_time = LaunchConfiguration('use_sim_time', default='false')
 
     rover_bringup_dir = get_package_share_directory('rover_bringup')
-    nav2_bringup_dir = get_package_share_directory('nav2_bringup')
-    ydlidar_dir = get_package_share_directory('ydlidar_ros2_driver')
+    osr_bringup_dir = get_package_share_directory('osr_bringup')
 
-    # Cámara USB V4L2
+    # 1. Rover Físico (Odometría + Motores)
+    osr_control_launch = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            os.path.join(osr_bringup_dir, 'launch', 'osr_launch.py') 
+        ),
+        launch_arguments={'enable_odometry': 'true'}.items()
+    )
+    
+    # 2. Cámara (V4L2)
     v4l2_camera_node = Node(
         package='v4l2_camera',
         executable='v4l2_camera_node',
         name='v4l2_camera',
         parameters=[
-            {'video_device': '/dev/video0'},
-            {'image_size': [640, 480]}
+            {'video_device': '/dev/video0'}, 
+            {'image_size': [640, 480]},      
+            {'framerate': 10}                
         ],
         output='screen'
     )
 
-    # LiDAR YDLidar
-    lidar_launch = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(
-            os.path.join(ydlidar_dir, 'launch', 'ydlidar_launch.py')
-        )
-    )
-
-    # Localización: EKF local y global
-    localizacion_launch = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(
-            os.path.join(rover_bringup_dir, 'launch', 'localizacion.launch.py')
-        ),
-        launch_arguments={'use_sim_time': use_sim_time}.items()
-    )
-
-    # Detección ArUco
+    # 3. Detección ArUcos
     aruco_params_path = os.path.join(rover_bringup_dir, 'config', 'aruco.yaml')
     aruco_node = Node(
         package='ros2_aruco',
@@ -53,34 +46,44 @@ def generate_launch_description():
         ],
         output='screen'
     )
-
-    # Puente ArUco -> EKF (posiciones mapa 7x7)
+    
+    # 4. Mock ArUco a EKF
     mock_aruco_node = ExecuteProcess(
         cmd=['python3', os.path.join(os.getcwd(), 'src', 'rover_bringup', 'config', 'mock_aruco.py'), '--ros-args', '-p', 'use_sim_time:=false'],
         output='screen'
     )
 
-    # Nav2 (AMCL, planificador, costmaps)
-    map_file = os.path.join(rover_bringup_dir, 'maps', 'map.yaml')
-    nav2_launch = IncludeLaunchDescription(
+    # 5. Localización Simplificada (El nuevo archivo)
+    localizacion_simple_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
-            os.path.join(nav2_bringup_dir, 'launch', 'bringup_launch.py')
+            os.path.join(rover_bringup_dir, 'launch', 'localizacion_simple.launch.py')
         ),
-        launch_arguments={
-            'map': map_file,
-            'use_sim_time': use_sim_time,
-            'params_file': os.path.join(rover_bringup_dir, 'config', 'nav2_params.yaml')
-        }.items()
+        launch_arguments={'use_sim_time': use_sim_time}.items()
+    )
+
+    # 6. Controlador Chapuza (Pure Pursuit Básico)
+    pure_pursuit_node = ExecuteProcess(
+        cmd=['python3', os.path.join(os.getcwd(), 'src', 'rover_bringup', 'src', 'simple_pure_pursuit.py')],
+        output='screen'
+    )
+
+    # 7. TF de Cámara (Igual que antes)
+    camera_tf = Node(
+        package='tf2_ros',
+        executable='static_transform_publisher',
+        name='camera_tf',
+        arguments=['0.09', '0.0', '0.2', '0', '0', '0', 'base_link', 'camera']
     )
 
     return LaunchDescription([
         SetParameter(name='use_sim_time', value=False),
         DeclareLaunchArgument('use_sim_time', default_value='false'),
-
+        
+        osr_control_launch,
         v4l2_camera_node,
-        lidar_launch,
-        localizacion_launch,
         aruco_node,
         mock_aruco_node,
-        nav2_launch,
+        localizacion_simple_launch,
+        pure_pursuit_node,
+        camera_tf
     ])

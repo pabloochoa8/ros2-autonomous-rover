@@ -1,0 +1,28 @@
+ekf_simple_node:
+  ros__parameters:
+    use_sim_time: false
+    frequency: 30.0
+    sensor_timeout: 0.1
+    two_d_mode: true
+    publish_tf: true
+
+    map_frame: map
+    odom_frame: odom
+    base_link_frame: base_link
+    world_frame: map
+
+    # 1. Odometría de ruedas (relativa, continua)
+    odom0: odom
+    odom0_config: [false, false, false,
+                   false, false, false,
+                   true,  true,  false,
+                   false, false, true,
+                   false, false, false]
+    
+    # 2. Detección ArUco (absoluta, discreta)
+    pose0: aruco_pose
+    pose0_config: [true,  true,  false,
+                   false, false, false, # El script actual mock_aruco ignora el Yaw, dependemos de la odometría para eso
+                   false, false, false,
+                   false, false, false,
+                   false, false, false]
