@@ -30,20 +30,23 @@
       </link>
     </model>
 
+    <!-- Paredes en sistema de coordenadas 0-7 m -->
+    <!-- Pared oeste: X=0, cubre Y de 0 a 7 -->
     <model name="wall_left_ext">
       <static>true</static>
       <link name="link">
         <visual name="visual">
           <geometry><box><size>7 0.1 1</size></box></geometry>
-          <material><ambient>1 1 1 1</ambient></material> 
+          <material><ambient>1 1 1 1</ambient></material>
         </visual>
         <collision name="collision">
           <geometry><box><size>7 0.1 1</size></box></geometry>
         </collision>
       </link>
-      <pose>-3.5 2.75 0.5 0 0 1.5708</pose> 
+      <pose>0 3.5 0.5 0 0 1.5708</pose>
     </model>
 
+    <!-- Pared este: X=7, cubre Y de 0 a 7 -->
     <model name="wall_right_ext">
       <static>true</static>
       <link name="link">
@@ -55,9 +58,10 @@
           <geometry><box><size>7 0.1 1</size></box></geometry>
         </collision>
       </link>
-      <pose>3.5 2.75 0.5 0 0 1.5708</pose> 
+      <pose>7 3.5 0.5 0 0 1.5708</pose>
     </model>
 
+    <!-- Pared norte: Y=7, cubre X de 0 a 7 -->
     <model name="wall_top_ext">
       <static>true</static>
       <link name="link">
@@ -69,9 +73,10 @@
           <geometry><box><size>7 0.1 1</size></box></geometry>
         </collision>
       </link>
-      <pose>0 6.25 0.5 0 0 0</pose> 
+      <pose>3.5 7 0.5 0 0 0</pose>
     </model>
 
+    <!-- Pared sur: Y=0, cubre X de 0 a 7 -->
     <model name="wall_bottom_ext">
       <static>true</static>
       <link name="link">
@@ -83,7 +88,7 @@
           <geometry><box><size>7 0.1 1</size></box></geometry>
         </collision>
       </link>
-      <pose>0 -0.75 0.5 0 0 0</pose> 
+      <pose>3.5 0 0.5 0 0 0</pose>
     </model>
   </world>
 </sdf>

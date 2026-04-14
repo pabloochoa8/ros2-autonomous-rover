@@ -28,26 +28,35 @@ def generate_launch_description():
         launch_arguments={'use_sim_time': use_sim_time}.items()
     )
 
-    # 2.5 Nuestro Puente Correcto (CMD_VEL)
+    # 2.5 Puente Gazebo <-> ROS 2
     puente_bueno = Node(
         package='ros_gz_bridge',
         executable='parameter_bridge',
         arguments=[
-            # Usamos el simple para evitar conflictos con el nombre del mundo
             '/clock@rosgraph_msgs/msg/Clock[gz.msgs.Clock',
             '/scan@sensor_msgs/msg/LaserScan[gz.msgs.LaserScan',
-            # Corregido: Añadida la coma al final y simplificado el nombre
-            '/imu@sensor_msgs/msg/Imu[gz.msgs.IMU', 
-            '/camera/image_raw@sensor_msgs/msg/Image[gz.msgs.Image',
+            '/imu@sensor_msgs/msg/Imu[gz.msgs.IMU',
+            # Cámara: Gazebo publica en /camera/image y /camera/camera_info
+            '/camera/image@sensor_msgs/msg/Image[gz.msgs.Image',
             '/camera/camera_info@sensor_msgs/msg/CameraInfo[gz.msgs.CameraInfo',
             '/odom_gazebo@nav_msgs/msg/Odometry[gz.msgs.Odometry'
         ],
-        # Si Gazebo publica en el nombre largo, el remapping lo pasa a /imu en ROS
         remappings=[
             ('/model/rover/link/imu_link/sensor/imu_sensor/imu', '/imu'),
+            # Remapeamos el topic de imagen al que espera aruco_node
+            ('/camera/image', '/image_raw'),
         ],
         parameters=[{'use_sim_time': use_sim_time}],
         output='screen'
+    )
+
+    # TF estático base_link -> camera (igual que en real.launch.py)
+    camera_tf = Node(
+        package='tf2_ros',
+        executable='static_transform_publisher',
+        name='camera_tf',
+        arguments=['0.09', '0.0', '0.2', '0', '0', '0', 'base_link', 'camera'],
+        parameters=[{'use_sim_time': use_sim_time}]
     )
 
     # 3. Nav2
@@ -134,6 +143,7 @@ def generate_launch_description():
         osr_launch,
         *spawn_arucos,
         puente_bueno,
+        camera_tf,
         nav2_launch,
         rviz_launch,
         localizacion_launch,
