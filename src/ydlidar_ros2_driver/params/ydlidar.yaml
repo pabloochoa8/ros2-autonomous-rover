@@ -21,6 +21,6 @@ ydlidar_ros2_driver_node:
     angle_min: -180.0
     range_max: 64.0
     range_min: 0.01
-    frequency: 10.0
+    frequency: 5.0
     invalid_range_is_inf: false
     debug: false

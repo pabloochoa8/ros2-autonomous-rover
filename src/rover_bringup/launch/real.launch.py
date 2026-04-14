@@ -36,7 +36,8 @@ def generate_launch_description():
         name='v4l2_camera',
         parameters=[
             {'video_device': '/dev/video0'}, # Apuntamos al dispositivo que descubriste que funciona
-            {'image_size': [640, 480]}       # Resolución ideal para el Hub y los ArUcos
+            {'image_size': [640, 480]},      # Resolución ideal para el Hub y los ArUcos
+            {'framerate': 10}                # Bajamos de 30 a 10 FPS para reducir carga
         ],
         output='screen'
     )
