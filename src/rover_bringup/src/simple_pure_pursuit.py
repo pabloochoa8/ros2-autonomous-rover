@@ -74,10 +74,23 @@ class SimplePurePursuit(Node):
         # Lógica chapuza: Primero me oriento, luego avanzo
         msg.angular.z = max(min(self.kp_w * yaw_error, self.max_w), -self.max_w)
         
-        if abs(yaw_error) < 0.3: # Si estamos mirando casi al objetivo, avanzamos
-            msg.linear.x = max(min(self.kp_v * dist, self.max_v), -self.max_v)
-        else:
-            msg.linear.x = 0.0 # Pivotar en el sitio
+        #if abs(yaw_error) < 0.3: # Si estamos mirando casi al objetivo, avanzamos
+        #    msg.linear.x = max(min(self.kp_v * dist, self.max_v), -self.max_v)
+        #else:
+        #    msg.linear.x = 0.0 # Pivotar en el sitio
+        # Avanzamos siempre. Si el error de ángulo es grande, reducimos un poco la velocidad 
+        # lineal para que el radio de giro sea más cerrado, pero nunca bajamos del 30% de velocidad.
+        factor_velocidad = max(0.3, 1.0 - abs(yaw_error) / 1.5)
+        msg.linear.x = max(min(self.kp_v * dist, self.max_v), -self.max_v) * factor_velocidad
+        
+        # LOG DETALLADO DE NAVEGACIÓN (Cada medio segundo para no saturar)
+        self.get_logger().info(
+            f"[DEBUG] Pose_Actual: (X:{x:.2f}, Y:{y:.2f}, Yaw:{yaw:.2f}) | "
+            f"Meta: (X:{self.goal.position.x:.2f}, Y:{self.goal.position.y:.2f}) | "
+            f"Distancia: {dist:.2f}m | Error_Giro: {yaw_error:.2f}rad | "
+            f"Enviando -> V:{msg.linear.x:.2f} m/s, W:{msg.angular.z:.2f} rad/s",
+            throttle_duration_sec=0.5
+        )
         
         self.publisher_.publish(msg)
 

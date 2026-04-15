@@ -69,7 +69,7 @@ class ServoWrapper(Node):
             self.corner_state_goal[ind] = (self.corner_state_goal[ind][0], angle)
             # offset to coordinate frame where x points to the middle of the rover, z down
             # and apply middle of actuation range offset, taking into account if servo is positive ccw or cw
-            angle = self.centered_pulse_widths[ind] + self.servo_direction * angle
+            angle = self.centered_pulse_widths[ind] + (-self.servo_direction if ind in (2, 3) else self.servo_direction) * angle
             self.log.debug(f"motor {corner_name} commanded to {angle}")
             # limit to operating range of servo
             angle = max(min(angle, self.servo_actuation_range), 0)
