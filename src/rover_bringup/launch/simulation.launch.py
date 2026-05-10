@@ -28,26 +28,35 @@ def generate_launch_description():
         launch_arguments={'use_sim_time': use_sim_time}.items()
     )
 
-    # 2.5 Nuestro Puente Correcto (CMD_VEL)
+    # 2.5 Puente Gazebo <-> ROS 2
     puente_bueno = Node(
         package='ros_gz_bridge',
         executable='parameter_bridge',
         arguments=[
-            # Usamos el simple para evitar conflictos con el nombre del mundo
             '/clock@rosgraph_msgs/msg/Clock[gz.msgs.Clock',
             '/scan@sensor_msgs/msg/LaserScan[gz.msgs.LaserScan',
-            # Corregido: Añadida la coma al final y simplificado el nombre
-            '/imu@sensor_msgs/msg/Imu[gz.msgs.IMU', 
-            '/camera/image_raw@sensor_msgs/msg/Image[gz.msgs.Image',
+            '/imu@sensor_msgs/msg/Imu[gz.msgs.IMU',
+            # Cámara: Gazebo publica en /camera/image y /camera/camera_info
+            '/camera/image@sensor_msgs/msg/Image[gz.msgs.Image',
             '/camera/camera_info@sensor_msgs/msg/CameraInfo[gz.msgs.CameraInfo',
             '/odom_gazebo@nav_msgs/msg/Odometry[gz.msgs.Odometry'
         ],
-        # Si Gazebo publica en el nombre largo, el remapping lo pasa a /imu en ROS
         remappings=[
             ('/model/rover/link/imu_link/sensor/imu_sensor/imu', '/imu'),
+            # Remapeamos el topic de imagen al que espera aruco_node
+            ('/camera/image', '/image_raw'),
         ],
         parameters=[{'use_sim_time': use_sim_time}],
         output='screen'
+    )
+
+    # TF estático base_link -> camera (igual que en real.launch.py)
+    camera_tf = Node(
+        package='tf2_ros',
+        executable='static_transform_publisher',
+        name='camera_tf',
+        arguments=['0.09', '0.0', '0.2', '0', '0', '0', 'base_link', 'camera'],
+        parameters=[{'use_sim_time': use_sim_time}]
     )
 
     # 3. Nav2
@@ -94,30 +103,50 @@ def generate_launch_description():
         output='screen'
     )
 
-    # 7. Aparecer el ArUco (1 metro delante del robot)
-    aruco_sdf_path = os.path.join(rover_bringup_dir, 'models', 'aruco_marker', 'model.sdf')
-    spawn_aruco = Node(
-        package='ros_gz_sim',
-        executable='create',
-        arguments=[
-            '-name', 'marcador_1',
-            '-file', aruco_sdf_path,
-            '-x', '4.0', '-y', '0.0', '-z', '0.15',
-            '-R', '0.0', '-P', '1.5708', '-Y', '0.0'
-        ],
-        output='screen'
-    )
+    # 7. Spawn de los 12 marcadores ArUco en sus posiciones del mapa 7x7
+    # Pitch=1.5708 los pone verticales; Yaw orientado hacia el interior del mapa
+    aruco_markers = [
+        # (id,   x,    y,   yaw)
+        (10,  1.5,  7.0,  3.14159),  # Pared norte, mira al sur
+        (11,  3.5,  7.0,  3.14159),
+        (12,  5.5,  7.0,  3.14159),
+        ( 1,  0.0,  1.5,  0.0),      # Pared oeste, mira al este
+        ( 2,  0.0,  3.5,  0.0),
+        ( 3,  0.0,  5.5,  0.0),
+        (30,  1.5,  0.0,  0.0),      # Pared sur, mira al norte
+        (31,  3.5,  0.0,  0.0),
+        (32,  5.5,  0.0,  0.0),
+        (50,  7.0,  1.5,  3.14159),  # Pared este, mira al oeste
+        (51,  7.0,  3.5,  3.14159),
+        (52,  7.0,  5.5,  3.14159),
+    ]
+
+    spawn_arucos = [
+        Node(
+            package='ros_gz_sim',
+            executable='create',
+            arguments=[
+                '-name', f'aruco_{mid}',
+                '-file', os.path.join(rover_bringup_dir, 'models', f'aruco_marker_{mid}', 'model.sdf'),
+                '-x', str(x), '-y', str(y), '-z', '0.5',
+                '-R', '0.0', '-P', '1.5708', '-Y', str(yaw)
+            ],
+            output='screen'
+        )
+        for mid, x, y, yaw in aruco_markers
+    ]
 
     return LaunchDescription([
         SetParameter(name='use_sim_time', value=True),
         DeclareLaunchArgument('use_sim_time', default_value='true'),
-        
-        osr_launch,         # Levanta Gazebo, el mapa 7x7 y spawnea tu rover con sus controladores
-        spawn_aruco,        # El ArUco en 1,0
+
+        osr_launch,
+        *spawn_arucos,
         puente_bueno,
-        nav2_launch,      # Comentado hasta generar el mapa de tu mundo
+        camera_tf,
+        nav2_launch,
         rviz_launch,
         localizacion_launch,
-        aruco_node,         # Levantamos el reconocedor real
+        aruco_node,
         mock_aruco_node
     ])

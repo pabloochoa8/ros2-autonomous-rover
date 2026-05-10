@@ -14,9 +14,8 @@ class ArucoProcessor(Node):
         
         self.pub_ekf = self.create_publisher(PoseWithCovarianceStamped, '/aruco_pose', 10)
         self.pub_initial = self.create_publisher(PoseWithCovarianceStamped, '/initialpose', 10)
-        self.amcl_inicializado = True
+        self.amcl_inicializado = False
 
-        self.DISTANCIA_MAXIMA = 5.0
         # ==========================================================
         # AQUÍ ESTÁ TU MAPA DE ARUCOS (ID: [X, Y, YAW_GLOBAL])
         # ==========================================================
@@ -56,13 +55,8 @@ class ArucoProcessor(Node):
 
             # Tomamos la medición de la cámara para este marcador concreto
             marker_pose = msg.poses[i]
-            z_c = marker_pose.position.z
             
-            if z_c > self.DISTANCIA_MAXIMA:
-                # Opcional: Descomentar la siguiente línea para ver cuándo ignora marcadores
-                # self.get_logger().debug(f"ArUco {marker_id} ignorado por lejanía: {z_c:.2f}m")
-                continue
-
+            z_c = marker_pose.position.z
             x_c = marker_pose.position.x
             q = marker_pose.orientation
 
@@ -98,17 +92,13 @@ class ArucoProcessor(Node):
             pose_msg.pose.pose.orientation.z = math.sin(yaw_robot / 2.0)
             pose_msg.pose.pose.orientation.w = math.cos(yaw_robot / 2.0)
 
-            # A medida que z_c crece, la covarianza aumenta (desconfiamos más).
-            covariancia_calculada = 0.3 + (z_c * 0.5)
+            pose_msg.pose.covariance[0] = 0.05
+            pose_msg.pose.covariance[7] = 0.05
+            pose_msg.pose.covariance[14] = 9999.0 # Ignorar Z
+            pose_msg.pose.covariance[21] = 9999.0 # Ignorar Roll
+            pose_msg.pose.covariance[28] = 9999.0 # Ignorar Pitch
+            pose_msg.pose.covariance[35] = 0.1    # ¡AHORA SÍ confía en el Yaw de la cámara!
 
-            pose_msg.pose.covariance[0] = covariancia_calculada   # X
-            pose_msg.pose.covariance[7] = covariancia_calculada   # Y
-            pose_msg.pose.covariance[14] = 9999.0 
-            pose_msg.pose.covariance[21] = 9999.0 
-            pose_msg.pose.covariance[28] = 9999.0 
-            
-            # El ángulo suele ser lo que más falla en los ArUcos, somos más conservadores
-            pose_msg.pose.covariance[35] = covariancia_calculada + 0.2 # Yaw
             self.pub_ekf.publish(pose_msg)
             self.get_logger().info(f"[ARUCO {marker_id}] Rover Localizado en -> X:{base_x:.2f}, Y:{base_y:.2f}, Yaw:{yaw_robot:.2f}")
             

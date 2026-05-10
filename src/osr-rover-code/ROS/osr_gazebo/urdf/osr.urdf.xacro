@@ -55,6 +55,19 @@
         <axis xyz="0 0 1"/>
     </joint>
 
+    <!-- Cámara frontal para detección ArUco -->
+    <link name="camera">
+        <inertial>
+            <mass value="0.01"/>
+            <inertia ixx="0.0" ixy="0.0" ixz="0.0" iyy="0.0" iyz="0.0" izz="0.0"/>
+        </inertial>
+    </link>
+    <joint name="camera_joint" type="fixed">
+        <parent link="base_link"/>
+        <child link="camera"/>
+        <origin rpy="0 0 0" xyz="0.09 0.0 0.2"/>
+    </joint>
+
 
     <link name="box_rotate">
         <collision>
