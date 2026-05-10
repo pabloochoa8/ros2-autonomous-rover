@@ -63,7 +63,7 @@ A fully autonomous wheeled rover built on the JPL Open Source Rover platform, ru
 | Drive MCU | RoboClaw (×3, serial 115200 baud, duty mode) |
 | Servo board | PCA9685 via Adafruit ServoKit |
 | Arm stepper | TMC2209 (UART, CRC, StealthChop) |
-| Platform | Raspberry Pi (assumed) + rocker-bogie chassis |
+| Platform | Raspberry Pi 5 + rocker-bogie chassis |
 
 ---
 
